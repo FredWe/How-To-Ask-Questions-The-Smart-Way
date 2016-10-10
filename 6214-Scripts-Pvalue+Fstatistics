@@ -1,0 +1,117 @@
+#Prepare the data
+library(MASS)
+library(ggplot2)
+data(Boston)
+Model1 <- lm(medv~lstat+rm,data=Boston) #construct 1st linear regression model
+summary(Model1) #summary it
+
+#Construct Model
+Model1 <- lm(medv~lstat+rm,data=Boston) 
+Model2 <- lm(medv~lstat+rm+age+indus,data=Boston)
+
+#Prepare all we need to feed our equation
+rss1 <- sum(residuals(Model1)^2) # get RSS of Model1
+rss2 <- sum(residuals(Model2)^2) # get RSS of Model2
+p1 <- 2 #number of vars in Model1
+p2 <- 4 #number of vars in Model2
+n <- nrow(Boston)# get sample size
+#Feed them to our equation
+df_num <- p2-p1
+df_denom <- n- p1
+F_stat_num <- (rss1-rss2)/(df_num)
+F_stat_denom <- rss1/(df_denom) #here in class it is rss1, but in wiki it is rss2
+F_stat <- F_stat_num/F_stat_denom
+F_stat
+
+#Construct F-distribution
+x.seq <- seq(from=0,to=10,length.out=1001 ) #get a set of ratio of variance for example use
+qplot(x=x.seq,y=pf(x.seq,df1=df_num,df2=df_denom),ylab='Probability',xlab='Possible Ratio of Variance',main='Standard CDF of F-distribution where df1=2,df2=502')+theme_gray()+geom_vline(xintercept = F_stat,color='red')
+
+F_stat_pvalue <- 1-pf(F_stat,df1=df_num,df2=df_denom) #calculate P-value from the CDF of F-distribution of our sample
+F_stat_pvalue
+
+#Plot F-distribution series functions
+par(mfrow=c(2,2))
+x.seq <- seq(from=0,to=10,length.out=1001 ) #get a set of ratio of variance for example use
+pic1<-qplot(x=x.seq,y=pf(x.seq,df1=df_num,df2=df_denom),color='firebricks',ylab='Probability',xlab='Possible Ratio of Variance',main='pf() where df1=2,df2=502')+theme_gray()+theme(legend.position="none")
+pic2<-qplot(x=x.seq,y=qf(x.seq,df1=df_num,df2=df_denom),color='firebricks',ylab='Probability',xlab='Possible Ratio of Variance',main='qf() where df1=2,df2=502')+theme_gray()+theme(legend.position="none")
+pic3<-qplot(x=x.seq,y=df(x.seq,df1=df_num,df2=df_denom),color='firebricks',ylab='Probability',xlab='Possible Ratio of Variance',main='df() where df1=2,df2=502')+theme_gray()+theme(legend.position="none")
+pic4<-qplot(x=x.seq,y=rf(x.seq,df1=df_num,df2=df_denom),color='firebricks',ylab='Probability',xlab='Possible Ratio of Variance',main='rf() where df1=2,df2=502')+theme_gray()+theme(legend.position="none")
+# Multiple plot function
+#
+# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# - cols:   Number of columns in layout
+# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#
+# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# then plot 1 will go in the upper left, 2 will go in the upper right, and
+# 3 will go all the way across the bottom.
+#
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+ if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+multiplot(pic1,pic2,pic3,pic4,cols=2)
+
+
+
+
+#linear analysis plots
+plot(Model1,1)
+plot(Model1,2)
+plot(Model1,3)
+plot(Model1,4)
+plot(Model1,5)
+
+
+#locate weird variable and improve it.
+par(mfrow=c(1,2))
+#plot the original graph
+plot(x=Boston$lstat,y=Boston$medv)
+abline(lm(medv~lstat,data=Boston),col=2,lwd=3)
+#use log to fix lstat, why?
+plot(x=log(Boston$lstat),y=Boston$medv)
+newLm <- lm(medv~log(lstat),data=Boston)
+abline(newLm,col=2,lwd=3)
+
+#check the improving results
+Model1A <- lm(medv~log(lstat)+rm,data=Boston) #transform lstat to log(lstat)
+Model2A <- lm(medv~log(lstat)+rm+age+indus,data=Boston) #transform lstat to log(lstat)
+#And compare to the old one
+old <- anova(Model1,Model2)
+row.names(old) <- paste('old_Model',c(1,2),sep = '')
+#And then we do the anova again
+new <- anova(Model1A,Model2A)
+row.names(new) <- paste('new_Model',c(1,2),sep = '')
+rbind(old,new)
