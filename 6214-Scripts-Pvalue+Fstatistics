@@ -1,121 +1,117 @@
-
-
-
-
-
 #Prepare the data
-
 library(MASS)
+library(ggplot2)
 data(Boston)
-head(Boston)
+Model1 <- lm(medv~lstat+rm,data=Boston) #construct 1st linear regression model
+summary(Model1) #summary it
 
-#a brief introduction
-
-#right model, everyone think
-Model1 <- lm(medv~lstat+rm-1,data=Boston)
-summary(Model1)
-
-
-#you will find it incredibly significant
-# SO above is the lr
-#R -squared amount of noise
-#if you believe it is normalization
-#F test is more precise, generate pvale
-
+#Construct Model
+Model1 <- lm(medv~lstat+rm,data=Boston) 
 Model2 <- lm(medv~lstat+rm+age+indus,data=Boston)
-summary(Model2)
 
-
-#compare MOdel2 and MOdel 1 ,coefficients changed
-
-# if you add p-value
-
-#focus on F statistic, 
-
-#let's test 
-#H_0: beta_age = beta_indus=0
-#easily do that with F test
-
-rss1 <- sum(residuals(Model1)^2) # = Model1$residuals
-rss2 <- sum(residuals(Model2)^2)
-#initialize
-p1 <- 3 #number of vars in Model1
+#Prepare all we need to feed our equation
+rss1 <- sum(residuals(Model1)^2) # get RSS of Model1
+rss2 <- sum(residuals(Model2)^2) # get RSS of Model2
+p1 <- 2 #number of vars in Model1
 p2 <- 4 #number of vars in Model2
-n <- nrow(Boston)#sample size
-#from F definition
-F_stat_num <- (rss1-rss2)/(p2-p1)
-F_stat_denom <- rss1/(n-p1)
-F_stat <- F_stat_num/F_stat_denom
-
-#and add df
+n <- nrow(Boston)# get sample size
+#Feed them to our equation
 df_num <- p2-p1
 df_denom <- n- p1
+F_stat_num <- (rss1-rss2)/(df_num)
+F_stat_denom <- rss1/(df_denom) #here in class it is rss1, but in wiki it is rss2
+F_stat <- F_stat_num/F_stat_denom
+F_stat
 
-x.seq <- seq(from=0,to=10,length.out=1001 )
-##check photo
-plot(x.seq,df(x.seq,df1=df_num,df2=df_denom)
-     #,type='1'
-     )
-#polygon(x=c(x.seq[x.seq >= F_stat],F_stat),
-#        y=c(df(x.seq,df1=df_num,df2=df_denom))
-#        )
+#Construct F-distribution
+x.seq <- seq(from=0,to=10,length.out=1001 ) #get a set of ratio of variance for example use
+qplot(x=x.seq,y=pf(x.seq,df1=df_num,df2=df_denom),ylab='Probability',xlab='Possible Ratio of Variance',main='Standard CDF of F-distribution where df1=2,df2=502')+theme_gray()+geom_vline(xintercept = F_stat,color='red')
 
-#give you the cdf
-pf(F_stat,df1=df_denom,df2=df_num)
-F_stat_pvalue <- 1-pf(F_stat,df1=df_denom,df2=df_num)
-
+F_stat_pvalue <- 1-pf(F_stat,df1=df_num,df2=df_denom) #calculate P-value from the CDF of F-distribution of our sample
 F_stat_pvalue
 
-##considering we get 0.097... Fstatistics, so we thinks Model1 is better?
-
-#question?
-
-#another function
-alpha <- 0.05
-qf(1-alpha,df1=df_num,df2=df_denom)
-
-#a simple question for Fstatistics
-anova(Model1,Model2)
-Model_anova_12 <- anova(Model1,Model2)
-str(Model_anova_12)
-
-#and those are for normalization distribution,
-#residuals are indepent...
-#and if you decide to take the results you get follow this way,
+#Plot F-distribution series functions
+par(mfrow=c(2,2))
+x.seq <- seq(from=0,to=10,length.out=1001 ) #get a set of ratio of variance for example use
+pic1<-qplot(x=x.seq,y=pf(x.seq,df1=df_num,df2=df_denom),color='firebricks',ylab='Probability',xlab='Possible Ratio of Variance',main='pf() where df1=2,df2=502')+theme_gray()+theme(legend.position="none")
+pic2<-qplot(x=x.seq,y=qf(x.seq,df1=df_num,df2=df_denom),color='firebricks',ylab='Probability',xlab='Possible Ratio of Variance',main='qf() where df1=2,df2=502')+theme_gray()+theme(legend.position="none")
+pic3<-qplot(x=x.seq,y=df(x.seq,df1=df_num,df2=df_denom),color='firebricks',ylab='Probability',xlab='Possible Ratio of Variance',main='df() where df1=2,df2=502')+theme_gray()+theme(legend.position="none")
+pic4<-qplot(x=x.seq,y=rf(x.seq,df1=df_num,df2=df_denom),color='firebricks',ylab='Probability',xlab='Possible Ratio of Variance',main='rf() where df1=2,df2=502')+theme_gray()+theme(legend.position="none")
+# Multiple plot function
 #
-#you have to prove it ,by the following ways:
-#plot(Model1)
-#first image is weird, because it supposed to be flat,but the left part is higher
-#second image is weird,because QQ plot is not based on the line,some of the residuals is not normal
-##and heavy tail? and what?
-#third image ?Scale location?
+# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# - cols:   Number of columns in layout
+# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#
+# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# then plot 1 will go in the upper left, 2 will go in the upper right, and
+# 3 will go all the way across the bottom.
+#
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+ if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+multiplot(pic1,pic2,pic3,pic4,cols=2)
 
 
+
+
+#linear analysis plots
+plot(Model1,1)
+plot(Model1,2)
+plot(Model1,3)
+plot(Model1,4)
+plot(Model1,5)
+
+
+#locate weird variable and improve it.
+par(mfrow=c(1,2))
+#plot the original graph
 plot(x=Boston$lstat,y=Boston$medv)
 abline(lm(medv~lstat,data=Boston),col=2,lwd=3)
-#we see a straight line here, and it shows we have to do a transformation
+#use log to fix lstat, why?
+plot(x=log(Boston$lstat),y=Boston$medv)
 newLm <- lm(medv~log(lstat),data=Boston)
-##plot the log,and found the right part seems better
-##
-plot(x=Boston$lstat,y=Boston$medv)
-abline(lm(medv~lstat,data=Boston),col=2,lwd=3)
+abline(newLm,col=2,lwd=3)
 
-#if we change it a little more, then it becomes even better
-Model1A <- lm(medv~log(lstat)+rm,data=Boston)
-##plot(Model1A)
-Model2A <- lm(medv~log(lstat)+rm+age+indus,data=Boston)
-##plot
-
-#question, should we do those transformation one by one? just try?
-#let's check again the anova
-anova(Model1A,Model2A)
-
-#because the prediction improves, so the anova actually becomes better
-
-##check the photo
-
-#changing x ,makes the model much better
-#what can we do if there are changing variant?
-
-#question, what if the model is just that,
-#lengthy
+#check the improving results
+Model1A <- lm(medv~log(lstat)+rm,data=Boston) #transform lstat to log(lstat)
+Model2A <- lm(medv~log(lstat)+rm+age+indus,data=Boston) #transform lstat to log(lstat)
+#And compare to the old one
+old <- anova(Model1,Model2)
+row.names(old) <- paste('old_Model',c(1,2),sep = '')
+#And then we do the anova again
+new <- anova(Model1A,Model2A)
+row.names(new) <- paste('new_Model',c(1,2),sep = '')
+rbind(old,new)
